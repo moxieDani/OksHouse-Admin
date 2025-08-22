@@ -233,7 +233,6 @@ analysis/output/
 # Chart images and reports
 charts/
 reports/
-*.png
 *.jpg
 *.jpeg
 *.gif
@@ -277,6 +276,4 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
-
-package-lock.json
 
