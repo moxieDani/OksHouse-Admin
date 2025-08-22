@@ -4,7 +4,7 @@
  */
 
 // API Configuration
-export const API_BASE_URL = 'http://localhost:8000/api/v1';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 // 인증 모듈 참조 (동적으로 설정됨)
 let authModule = null;
