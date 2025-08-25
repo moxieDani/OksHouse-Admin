@@ -1,3 +1,5 @@
+import { base } from '$app/paths';
+
 // Firebase 설정
 const firebaseConfig = {
 	apiKey: "AIzaSyCFUztWmjyDED4ekZx10D3MfQMe2_Qd7q8",
@@ -79,8 +81,13 @@ export async function requestFCMToken() {
 		
 		// FCM 토큰 획득
 		const { getToken } = await import('firebase/messaging');
-		// 실제 운영에서는 Firebase 콘솔에서 생성된 VAPID 키를 사용해야 함
-		const token = await getToken(messaging, {vapidKey: import.meta.env.VITE_FCM_VAPID_KEY});
+
+		// 서비스 워커 등록 및 VAPID 키 전달
+		const swRegistration = await navigator.serviceWorker.register(`${base}/firebase-messaging-sw.js`);
+		const token = await getToken(messaging, {
+			vapidKey: import.meta.env.VITE_FCM_VAPID_KEY,
+			serviceWorkerRegistration: swRegistration
+		});
 		
 		if (!token) {
 			throw new Error('FCM 토큰을 받을 수 없습니다');
