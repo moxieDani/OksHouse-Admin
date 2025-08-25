@@ -55,7 +55,7 @@ self.addEventListener('notificationclick', (event) => {
 	if (event.action === 'view') {
 		// 관리자 페이지로 이동
 		event.waitUntil(
-			clients.openWindow('/')
+			clients.openWindow('/OksHouse-Admin/')
 		);
 	} else if (event.action === 'close') {
 		// 알림만 닫기
@@ -63,7 +63,7 @@ self.addEventListener('notificationclick', (event) => {
 	} else {
 		// 기본 클릭 동작 - 관리자 페이지로 이동
 		event.waitUntil(
-			clients.openWindow('/')
+			clients.openWindow('/OksHouse-Admin/')
 		);
 	}
 });

@@ -82,8 +82,13 @@ export async function requestFCMToken() {
 		// FCM 토큰 획득
 		const { getToken } = await import('firebase/messaging');
 
-		// 서비스 워커 등록 및 VAPID 키 전달
-		const swRegistration = await navigator.serviceWorker.register(`${base}/firebase-messaging-sw.js`);
+		// 서비스 워커 등록
+		await navigator.serviceWorker.register(`${base}/firebase-messaging-sw.js`);
+
+		// 서비스 워커가 활성화될 때까지 대기
+		const swRegistration = await navigator.serviceWorker.ready;
+
+		// VAPID 키와 함께 토큰 요청
 		const token = await getToken(messaging, {
 			vapidKey: import.meta.env.VITE_FCM_VAPID_KEY,
 			serviceWorkerRegistration: swRegistration
