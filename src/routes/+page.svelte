@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { administrators } from '$lib/constants/admins.js';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import AdminAuthModal from '$lib/components/AdminAuthModal.svelte';
 	import { isAuthenticated, currentAdmin, isLoading } from '$lib/stores/auth.js';
 	
@@ -29,7 +30,7 @@
 					const { getStringIdFromNumeric } = await import('$lib/constants/admins.js');
 					const stringId = getStringIdFromNumeric(result.admin.admin_id);
 					if (stringId) {
-						goto(`/${stringId}`);
+						goto(`${base}/${stringId}`);
 					}
 				}
 			}
@@ -60,7 +61,7 @@
 		const { getStringIdFromNumeric } = await import('$lib/constants/admins.js');
 		const stringId = getStringIdFromNumeric(admin.admin_id);
 		if (stringId) {
-			goto(`/${stringId}`);
+			goto(`${base}/${stringId}`);
 		}
 	}
 	
