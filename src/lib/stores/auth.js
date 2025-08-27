@@ -4,6 +4,7 @@ import { setAuthModule } from '../../shared/services/apiBase.js';
 import { analyzeTokenStatus } from '../utils/tokenUtils.js';
 import { goto } from '$app/navigation';
 import { base } from '$app/paths';
+import { setCookie, getCookie, eraseCookie } from '../utils/cookieUtils.js';
 
 /**
  * 관리자 인증 상태 관리
@@ -18,6 +19,7 @@ export const isLoading = writable(false);
 
 // 내부 토큰 저장소
 let currentAccessToken = null;
+let isLoggingOut = false; // 로그아웃 진행 상태 플래그
 
 /**
  * 액세스 토큰 설정 및 세션 저장
@@ -64,6 +66,12 @@ async function baseVerifyPhoneAndLogin(phone) {
 		
 		// 액세스 토큰 설정
 		setAccessToken(response.access_token);
+
+		// 쿠키가 없을 때만 전화번호 쿠키에 저장 (365일)
+		const existingPhone = getCookie('admin_phone');
+		if (!existingPhone) {
+			setCookie('admin_phone', btoa(phone), 365);
+		}
 		
 		// 관리자 정보 설정
 		const adminInfo = {
@@ -95,6 +103,10 @@ async function baseVerifyPhoneAndLogin(phone) {
  * 리프레시 토큰으로 액세스 토큰 갱신
  */
 export async function refreshAccessToken() {
+	if (isLoggingOut) {
+		return { success: false, error: "Logout in progress." };
+	}
+
 	try {
 		const response = await adminAPI.refreshToken();
 		
@@ -115,14 +127,25 @@ export async function refreshAccessToken() {
 			admin: adminInfo
 		};
 		
-	} catch (error) {
-		console.error('토큰 갱신 실패:', error);
-		// 갱신 실패시 로그아웃 처리
-		await logout();
-		return {
-			success: false,
-			error: error.message || '토큰 갱신에 실패했습니다.'
-		};
+	} catch (error) {	
+		if (isLoggingOut) {
+			return { success: false, error: "Logout in progress." };
+		}
+		// 토큰 갱신 실패 시 쿠키에 저장된 전화번호로 재로그인 시도
+		const encodedPhone = getCookie('admin_phone');
+		if (encodedPhone) {
+			const storedPhone = atob(encodedPhone);
+			// 재시도 전에 기존 액세스 토큰을 삭제합니다.
+			setAccessToken(null);
+			return await verifyPhoneAndLogin(storedPhone);
+		} else {
+			// 저장된 전화번호가 없으면 로그아웃 처리
+			await logout();
+			return {
+				success: false,
+				error: error.message || '토큰 갱신에 실패했고, 재로그인할 정보가 없습니다.'
+			};
+		}
 	}
 }
 
@@ -201,6 +224,9 @@ async function baseLogout() {
 	currentAdmin.set(null);
 	isAuthenticated.set(false);
 	
+	// 전화번호 쿠키 삭제
+	eraseCookie('admin_phone');
+	
 	// 관리자 페이지 메인으로 리다이렉트
 	if (typeof window !== 'undefined') {
 		goto(`${base}/`);
@@ -212,10 +238,9 @@ let tokenMonitorInterval = null;
 
 /**
  * 토큰 모니터링 시작
- * 30초마다 토큰 상태를 체크하고 필요시 자동 갱신
  */
 function startTokenMonitoring() {
-	if (typeof window === 'undefined') return;
+	if (typeof window === 'undefined' || isLoggingOut) return;
 	
 	// 기존 인터벌 정리
 	if (tokenMonitorInterval) {
@@ -225,7 +250,7 @@ function startTokenMonitoring() {
 	// 30초마다 토큰 상태 체크
 	tokenMonitorInterval = setInterval(async () => {
 		const token = getAccessToken();
-		if (!token) return;
+		if (!token || isLoggingOut) return;
 		
 		const tokenStatus = analyzeTokenStatus(token);
 		
@@ -261,6 +286,7 @@ function stopTokenMonitoring() {
  * 관리자 전화번호 인증 및 로그인 (모니터링 포함)
  */
 export async function verifyPhoneAndLogin(phone) {
+	isLoggingOut = false; // 로그인 시도 시 로그아웃 상태 해제
 	const result = await baseVerifyPhoneAndLogin(phone);
 	
 	if (result.success) {
@@ -289,11 +315,16 @@ export async function checkAuthStatus() {
  * 로그아웃 (모니터링 중지 포함)
  */
 export async function logout() {
+	if (isLoggingOut) return;
+	isLoggingOut = true;
+
 	// 토큰 모니터링 중지
 	stopTokenMonitoring();
 	
 	// 기존 로그아웃 로직 실행
-	return await baseLogout();
+	await baseLogout();
+
+	// isLoggingOut 플래그는 페이지 전환 후 초기화되므로 별도 리셋 불필요
 }
 
 // API 인터셉터에 인증 모듈 등록 (브라우저에서만)
