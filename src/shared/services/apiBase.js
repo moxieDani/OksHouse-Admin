@@ -6,9 +6,6 @@
 // API Configuration
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
-// 현재 API Base URL 로그 출력
-console.log('Current API_BASE_URL:', API_BASE_URL);
-
 // 인증 모듈 참조 (동적으로 설정됨)
 let authModule = null;
 
@@ -25,7 +22,8 @@ export function setAuthModule(module) {
 function isAdminAPIRequest(endpoint) {
 	return endpoint.includes('/admin/') && 
 	       !endpoint.includes('/admin/auth/verify-phone') &&
-	       !endpoint.includes('/admin/auth/refresh');
+	       !endpoint.includes('/admin/auth/refresh') &&
+	       !endpoint.includes('/admin/auth/logout');
 }
 
 /**
