@@ -29,12 +29,12 @@ export function setAccessToken(token) {
 	if (typeof window !== 'undefined') {
 		try {
 			if (token) {
-				sessionStorage.setItem('admin_access_token', token);
+				localStorage.setItem('admin_access_token', token);
 			} else {
-				sessionStorage.removeItem('admin_access_token');
+				localStorage.removeItem('admin_access_token');
 			}
 		} catch (error) {
-			console.error('sessionStorage 접근 실패:', error);
+			console.error('localStorage 접근 실패:', error);
 		}
 	}
 }
@@ -45,9 +45,9 @@ export function setAccessToken(token) {
 export function getAccessToken() {
 	if (!currentAccessToken && typeof window !== 'undefined') {
 		try {
-			currentAccessToken = sessionStorage.getItem('admin_access_token');
+			currentAccessToken = localStorage.getItem('admin_access_token');
 		} catch (error) {
-			console.error('sessionStorage 접근 실패:', error);
+			console.error('localStorage 접근 실패:', error);
 		}
 	}
 	return currentAccessToken;
@@ -306,7 +306,7 @@ if (typeof window !== 'undefined') {
 	});
 	
 	// 페이지 로드시 기존 토큰이 있으면 모니터링 시작
-	const existingToken = sessionStorage.getItem('admin_access_token');
+	const existingToken = localStorage.getItem('admin_access_token');
 	if (existingToken) {
 		// 토큰 유효성 확인 후 모니터링 시작
 		const tokenStatus = analyzeTokenStatus(existingToken);

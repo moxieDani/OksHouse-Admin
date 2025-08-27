@@ -19,24 +19,21 @@
 		isLoading.set(true);
 		
 		try {
-			// 기존 액세스 토큰만 확인 (refresh 시도 안함)
-			const { getAccessToken, getCurrentAdminInfo } = await import('$lib/stores/auth.js');
-			const token = getAccessToken();
+			// localStorage에 저장된 토큰으로 자동 로그인 시도
+			const { checkAuthStatus } = await import('$lib/stores/auth.js');
+			const authResult = await checkAuthStatus();
 			
-			if (token) {
-				const result = await getCurrentAdminInfo();
-				if (result.success && result.admin) {
-					// 숫자 ID를 문자열 ID로 변환하여 이동
-					const { getStringIdFromNumeric } = await import('$lib/constants/admins.js');
-					const stringId = getStringIdFromNumeric(result.admin.admin_id);
-					if (stringId) {
-						goto(`${base}/${stringId}`);
-					}
+			if (authResult.success && authResult.admin) {
+				// 숫자 ID를 문자열 ID로 변환하여 해당 관리자 페이지로 이동
+				const { getStringIdFromNumeric } = await import('$lib/constants/admins.js');
+				const stringId = getStringIdFromNumeric(authResult.admin.admin_id);
+				if (stringId) {
+					goto(`${base}/${stringId}`);
 				}
 			}
 		} catch (error) {
-			console.log('No valid session found');
-			// 에러는 무시하고 메인 페이지에 머물기
+			console.log('Auto-login failed:', error);
+			// 자동 로그인 실패시 메인 페이지에 머물기
 		} finally {
 			isLoading.set(false);
 		}
