@@ -126,11 +126,10 @@ export async function setupFCMListener(onMessageReceived) {
 		
 		// 앱이 포그라운드에 있을 때 메시지 수신
 		const { onMessage } = await import('firebase/messaging');
-		onMessage(messaging, (payload) => {			
-			// 커스텀 알림 표시
-			if (payload.notification) {
-				showCustomNotification(payload.notification, payload.data);
-			}
+		onMessage(messaging, (payload) => {
+			console.log('포그라운드 메시지 수신:', payload);
+			// 서비스 워커가 모든 알림을 처리하므로, 포그라운드에서는 알림을 직접 표시하지 않습니다.
+			// 단, 실시간 UI 업데이트 등을 위해 콜백은 계속 실행합니다.
 			
 			// 콜백 함수 실행
 			if (onMessageReceived) {

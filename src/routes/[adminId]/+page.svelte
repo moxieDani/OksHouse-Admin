@@ -142,16 +142,21 @@
 		// 윈도우 리사이즈 시 높이 재조정
 		window.addEventListener('resize', adjustHeightToLastCard);
 		
-		// FCM 초기화 (인증 완료 후)
-		if ($isAuthenticated) {
-			initializeFCMNotifications();
-		}
+		// FCM 초기화는 반응형으로 처리
+		// if ($isAuthenticated) {
+		// 	initializeFCMNotifications();
+		// }
 		
 		// 정리
 		return () => {
 			window.removeEventListener('resize', adjustHeightToLastCard);
 		};
 	});
+
+	// Reactive statement for FCM initialization
+	$: if ($isAuthenticated && typeof window !== 'undefined') {
+		initializeFCMNotifications();
+	}
 
 
 	/**
