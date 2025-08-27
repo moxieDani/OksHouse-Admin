@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import AdminCalendar from '$lib/components/AdminCalendar.svelte';
 	import FeedbackManager from '../../shared/components/FeedbackManager.svelte';
 	import { checkAuthStatus, logout, isAuthenticated, currentAdmin as authCurrentAdmin } from '$lib/stores/auth.js';
@@ -117,7 +118,7 @@
 		
 		// 인증되지 않은 경우 메인 페이지로 리다이렉트
 		if (!authResult.success) {
-			goto('/');
+			goto(`${base}/`);
 			return;
 		}
 		
@@ -127,7 +128,7 @@
 		const currentNumericId = getNumericIdFromString(adminId);
 		
 		if (authResult.admin && authResult.admin.admin_id !== currentNumericId) {
-			goto(`/${authenticatedStringId}`);
+			goto(`${base}/${authenticatedStringId}`);
 			return;
 		}
 		
@@ -523,7 +524,7 @@
 		try {
 			await logout();
 			// 메인 관리자 페이지로 리다이렉트
-			goto('/');
+			goto(`${base}/`);
 		} catch (error) {
 			console.error('로그아웃 실패:', error);
 			showErrorFeedback(feedbackManager, '로그아웃에 실패했습니다.', error.message);

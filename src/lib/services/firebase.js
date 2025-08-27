@@ -126,9 +126,7 @@ export async function setupFCMListener(onMessageReceived) {
 		
 		// 앱이 포그라운드에 있을 때 메시지 수신
 		const { onMessage } = await import('firebase/messaging');
-		onMessage(messaging, (payload) => {
-			console.log('포그라운드 메시지 수신:', payload);
-			
+		onMessage(messaging, (payload) => {			
 			// 커스텀 알림 표시
 			if (payload.notification) {
 				showCustomNotification(payload.notification, payload.data);
@@ -152,8 +150,8 @@ export function showCustomNotification(notification, data = {}) {
 	if (Notification.permission === 'granted') {
 		const notificationOptions = {
 			body: notification.body,
-			icon: '/icons/icon-192x192.png',
-			badge: '/icons/badge-72x72.png',
+			icon: `${base}/icons/icon-192x192.png`,
+			badge: `${base}/icons/badge-72x72.png`,
 			tag: 'okshouse-reservation-' + Date.now(),
 			renotify: true,
 			data: data

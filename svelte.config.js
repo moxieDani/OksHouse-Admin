@@ -9,7 +9,7 @@ const config = {
 			fallback: 'index.html'
 		}),
 		paths: {
-			base: process.env.NODE_ENV === 'production' ? '/OksHouse-Admin' : ''
+			base: '/OksHouse-Admin'
 		},
 		prerender: {
 			entries: ['*']

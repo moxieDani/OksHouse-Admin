@@ -2,6 +2,8 @@ import { writable } from 'svelte/store';
 import { adminAPI } from '../services/api.js';
 import { setAuthModule } from '../../shared/services/apiBase.js';
 import { analyzeTokenStatus } from '../utils/tokenUtils.js';
+import { goto } from '$app/navigation';
+import { base } from '$app/paths';
 
 /**
  * 관리자 인증 상태 관리
@@ -201,10 +203,7 @@ async function baseLogout() {
 	
 	// 관리자 페이지 메인으로 리다이렉트
 	if (typeof window !== 'undefined') {
-		const currentPath = window.location.pathname;
-		if (currentPath.includes('/') || currentPath.includes('/admin')) {
-			window.location.href = '/';
-		}
+		goto(`${base}/`);
 	}
 }
 
