@@ -353,9 +353,14 @@
 	$: filteredReservations = filterReservations(allReservations, selectedFilter, groupedReservations);
 
 	/**
-	 * 체크인 날짜 기준 오름차순 정렬된 예약 목록
+	 * 상태 순서(대기 → 확정 → 거절 → 이용종료) 우선, 동일 상태 내에서는 체크인 날짜 오름차순
 	 */
-	$: sortedReservations = filteredReservations.sort((a, b) => {
+	$: sortedReservations = [...filteredReservations].sort((a, b) => {
+		/** @type {Record<string, number>} */
+		const statusOrder = { pending: 0, confirmed: 1, cancelled: 2, expired: 3 };
+		const orderA = statusOrder[a.status] ?? 99;
+		const orderB = statusOrder[b.status] ?? 99;
+		if (orderA !== orderB) return orderA - orderB;
 		const dateA = new Date(a.startDate || a.start_date);
 		const dateB = new Date(b.startDate || b.start_date);
 		return dateA.getTime() - dateB.getTime();
