@@ -1,6 +1,6 @@
 <script>
 	import { page } from '$app/stores';
-	import { onMount, tick } from 'svelte';
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import AdminCalendar from '$lib/components/AdminCalendar.svelte';
@@ -38,10 +38,12 @@
 	$: adminId = $page.params.adminId;
 	$: currentAdmin = adminId && administrators ? administrators[/** @type {keyof typeof administrators} */ (adminId)] : null;
 
-	// 달력 상태 - 8월부터 시작
-	let currentMonth = 7; // 8월 (0-based index)
-	let currentYear = 2025;
+	// 달력 상태 - 초기값은 오늘 날짜 (loadAllReservations 완료 후 첫 카드 기준으로 재조정됨)
+	let currentMonth = new Date().getMonth();
+	let currentYear = new Date().getFullYear();
+	/** @type {any[]} */
 	let existingReservations = []; // 현재 월의 예약 데이터
+	/** @type {any[]} */
 	let allReservations = []; // 전체 예약 데이터 (통계용)
 	let isLoading = false; // 초기 로딩 상태
 	let isRefreshing = false; // 새로고침 상태
@@ -133,9 +135,13 @@
 		}
 		
 		// 실제 API를 통한 데이터 로드
-		loadAllReservations(); // 전체 예약 데이터 로드 (통계용)
-		loadMonthlyReservations(); // 현재 월 예약 데이터 로드
-		
+		// 전체 예약 데이터 먼저 로드 → 첫 카드 기준으로 초기 달력 월 결정 → 월별 데이터 로드
+		await loadAllReservations();
+		const { year, month } = getTargetMonthForFilter(selectedFilter);
+		currentYear = year;
+		currentMonth = month;
+		await loadMonthlyReservations();
+
 		// 초기 높이 조정
 		adjustHeightToLastCard();
 		
@@ -295,6 +301,44 @@
 
 
 	/**
+	 * 예약 정렬 비교자
+	 * 1차: 상태(대기 → 확정 → 거절 → 이용종료), 2차: 체크인 날짜 오름차순
+	 * @param {any} a
+	 * @param {any} b
+	 */
+	function compareReservations(a, b) {
+		/** @type {Record<string, number>} */
+		const statusOrder = { pending: 0, confirmed: 1, cancelled: 2, expired: 3 };
+		const orderA = statusOrder[a.status] ?? 99;
+		const orderB = statusOrder[b.status] ?? 99;
+		if (orderA !== orderB) return orderA - orderB;
+		const dateA = new Date(a.startDate || a.start_date);
+		const dateB = new Date(b.startDate || b.start_date);
+		return dateA.getTime() - dateB.getTime();
+	}
+
+	/**
+	 * 주어진 필터의 첫 번째 카드 날짜가 포함된 달을 계산
+	 * 첫 번째 카드가 없으면 오늘 날짜의 달을 반환
+	 * @param {string} filter
+	 * @returns {{ year: number, month: number }}
+	 */
+	function getTargetMonthForFilter(filter) {
+		if (adminId) {
+			const grouped = groupReservationsByCategory(allReservations, adminId);
+			const filtered = filterReservations(allReservations, filter, grouped);
+			const sorted = [...filtered].sort(compareReservations);
+			const first = sorted[0];
+			if (first) {
+				const checkInDate = first.startDate || new Date(first.start_date);
+				return { year: checkInDate.getFullYear(), month: checkInDate.getMonth() };
+			}
+		}
+		const today = new Date();
+		return { year: today.getFullYear(), month: today.getMonth() };
+	}
+
+	/**
 	 * 필터 변경 처리
 	 * 필터 변경 후 정렬된 예약목록의 첫 번째 카드 날짜가 포함된 달로 달력 이동
 	 * @param {string} filter
@@ -302,20 +346,11 @@
 	async function handleFilterChange(filter) {
 		selectedFilter = filter;
 
-		// sortedReservations가 반응성으로 갱신될 때까지 대기
-		await tick();
-
-		const firstReservation = sortedReservations[0];
-		if (firstReservation) {
-			const checkInDate = firstReservation.startDate || new Date(firstReservation.start_date);
-			const targetYear = checkInDate.getFullYear();
-			const targetMonth = checkInDate.getMonth(); // 0-based index
-
-			if (currentYear !== targetYear || currentMonth !== targetMonth) {
-				currentYear = targetYear;
-				currentMonth = targetMonth;
-				await loadMonthlyReservations();
-			}
+		const { year, month } = getTargetMonthForFilter(filter);
+		if (currentYear !== year || currentMonth !== month) {
+			currentYear = year;
+			currentMonth = month;
+			await loadMonthlyReservations();
 		}
 
 		// 필터 변경 후 마지막 카드 하단에 맞춰 높이 재조정
@@ -374,16 +409,7 @@
 	/**
 	 * 상태 순서(대기 → 확정 → 거절 → 이용종료) 우선, 동일 상태 내에서는 체크인 날짜 오름차순
 	 */
-	$: sortedReservations = [...filteredReservations].sort((a, b) => {
-		/** @type {Record<string, number>} */
-		const statusOrder = { pending: 0, confirmed: 1, cancelled: 2, expired: 3 };
-		const orderA = statusOrder[a.status] ?? 99;
-		const orderB = statusOrder[b.status] ?? 99;
-		if (orderA !== orderB) return orderA - orderB;
-		const dateA = new Date(a.startDate || a.start_date);
-		const dateB = new Date(b.startDate || b.start_date);
-		return dateA.getTime() - dateB.getTime();
-	});
+	$: sortedReservations = [...filteredReservations].sort(compareReservations);
 
 	/**
 	 * 정렬된 예약 목록이 변경될 때마다 높이 재조정
