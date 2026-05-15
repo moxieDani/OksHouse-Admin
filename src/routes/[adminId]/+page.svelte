@@ -1,6 +1,6 @@
 <script>
 	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import AdminCalendar from '$lib/components/AdminCalendar.svelte';
@@ -296,9 +296,28 @@
 
 	/**
 	 * 필터 변경 처리
+	 * 필터 변경 후 정렬된 예약목록의 첫 번째 카드 날짜가 포함된 달로 달력 이동
+	 * @param {string} filter
 	 */
-	function handleFilterChange(filter) {
+	async function handleFilterChange(filter) {
 		selectedFilter = filter;
+
+		// sortedReservations가 반응성으로 갱신될 때까지 대기
+		await tick();
+
+		const firstReservation = sortedReservations[0];
+		if (firstReservation) {
+			const checkInDate = firstReservation.startDate || new Date(firstReservation.start_date);
+			const targetYear = checkInDate.getFullYear();
+			const targetMonth = checkInDate.getMonth(); // 0-based index
+
+			if (currentYear !== targetYear || currentMonth !== targetMonth) {
+				currentYear = targetYear;
+				currentMonth = targetMonth;
+				await loadMonthlyReservations();
+			}
+		}
+
 		// 필터 변경 후 마지막 카드 하단에 맞춰 높이 재조정
 		setTimeout(() => {
 			adjustHeightToLastCard();
