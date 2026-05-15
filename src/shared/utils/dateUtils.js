@@ -10,19 +10,41 @@
  */
 export function formatKoreanDate(date) {
 	if (!date) return '';
-	
+
 	// Date 객체 보장 및 유효성 검증
 	const dateObj = date instanceof Date ? date : new Date(date);
 	if (isNaN(dateObj.getTime())) {
 		console.error('Invalid date passed to formatKoreanDate:', date);
 		return '';
 	}
-	
+
 	const month = dateObj.getMonth() + 1;
 	const day = dateObj.getDate();
 	const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 	const weekday = weekdays[dateObj.getDay()];
 	return `${month}월 ${day}일(${weekday})`;
+}
+
+/**
+ * 날짜를 연도를 포함한 한국어 형식으로 포맷팅
+ * @param {Date | string | null} date - 포맷팅할 날짜
+ * @returns {string} 포맷팅된 날짜 문자열 (YYYY년 MM월 DD일(요일))
+ */
+export function formatKoreanDateWithYear(date) {
+	if (!date) return '';
+
+	const dateObj = date instanceof Date ? date : new Date(date);
+	if (isNaN(dateObj.getTime())) {
+		console.error('Invalid date passed to formatKoreanDateWithYear:', date);
+		return '';
+	}
+
+	const year = dateObj.getFullYear();
+	const month = dateObj.getMonth() + 1;
+	const day = dateObj.getDate();
+	const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+	const weekday = weekdays[dateObj.getDay()];
+	return `${year}년 ${month}월 ${day}일(${weekday})`;
 }
 
 /**

@@ -14,7 +14,7 @@
 	
 	// API 및 서비스 imports
 	import { adminAPI } from '$lib/services/api.js';
-	import { formatKoreanDate } from '../../shared/utils/dateUtils.js';
+	import { formatKoreanDate, formatKoreanDateWithYear } from '../../shared/utils/dateUtils.js';
 	import { showErrorFeedback } from '../../shared/utils/errorUtils.js';
 	
 	// 상수 imports
@@ -757,7 +757,7 @@
 						<!-- 첫번째 줄: 이름과 날짜 -->
 						<div class="card-row-1">
 							<span class="guest-name">👤 {reservation.name}</span>
-							<span class="period-dates">{formatKoreanDate(reservation.startDate)} - {formatKoreanDate(reservation.endDate)}</span>
+							<span class="period-dates">{formatKoreanDateWithYear(reservation.startDate)} - {formatKoreanDateWithYear(reservation.endDate)}</span>
 						</div>
 						
 						<!-- 두번째 줄: 뱃지들 -->
