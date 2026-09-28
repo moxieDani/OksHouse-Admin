@@ -34,6 +34,7 @@ jobs:
     - name: Build
       env:
         VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+        VITE_GOOGLE_CALENDAR_API_KEY: ${{ secrets.VITE_GOOGLE_CALENDAR_API_KEY }}
       run: NODE_ENV=production npm run build
       
     - name: Setup Pages

@@ -1,6 +1,8 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
-	
+	import { browser } from '$app/environment';
+	import { fetchHolidays, clearHolidayCache, toHolidayKey } from '$lib/services/holidayService.js';
+
 	const dispatch = createEventDispatcher();
 	
 	// Props
@@ -8,6 +10,7 @@
 	export let currentYear = new Date().getFullYear();
 	export let existingReservations = [];
 	export let isRefreshing = false;
+	/** @type {(() => void) | null} */
 	export let onRefresh = null;
 	
 	// Constants
@@ -15,18 +18,53 @@
 	const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 	
 	let today = new Date().setHours(0, 0, 0, 0);
-	
-	// Reactive calendar days generation - existingReservations 변경시에도 업데이트
-	$: calendarDays = generateCalendarDays(currentYear, currentMonth, existingReservations);
-	
+	/** @type {Object<string, string>} { 'YYYY-MM-DD': '공휴일 이름' } */
+	let holidays = {};
+	let holidayRequestId = 0;
+
+	// Reactive calendar days generation - existingReservations, holidays 변경시에도 업데이트
+	$: calendarDays = generateCalendarDays(currentYear, currentMonth, existingReservations, holidays);
+	$: if (browser) loadHolidays(currentYear, currentMonth);
+
+	/**
+	 * 현재 달력에 보이는 기간의 공휴일 로드
+	 * @param {number} year - 년도
+	 * @param {number} month - 월 (0-11)
+	 */
+	async function loadHolidays(year, month) {
+		const requestId = ++holidayRequestId;
+
+		// 달력에 함께 보이는 이전/다음 달 날짜가 다른 연도일 수 있으므로 인접 연도도 조회
+		const years = [year];
+		if (month === 0) years.push(year - 1);
+		if (month === 11) years.push(year + 1);
+
+		const results = await Promise.all(years.map(fetchHolidays));
+
+		// 달을 빠르게 넘긴 경우 이전 요청의 응답이 최신 결과를 덮어쓰지 않도록 무시
+		if (requestId === holidayRequestId) {
+			holidays = Object.assign({}, ...results);
+		}
+	}
+
+	/**
+	 * 새로고침 - 예약 정보와 함께 공휴일도 다시 조회
+	 */
+	function handleRefresh() {
+		clearHolidayCache();
+		loadHolidays(currentYear, currentMonth);
+		onRefresh?.();
+	}
+
 	/**
 	 * 달력 날짜 생성
 	 * @param {number} year - 년도
 	 * @param {number} month - 월 (0-11)
 	 * @param {Array} reservations - 예약 데이터 (리액티브 의존성을 위해)
+	 * @param {Object<string, string>} holidayMap - 날짜별 공휴일 이름
 	 * @returns {Array} 달력 날짜 배열
 	 */
-	function generateCalendarDays(year, month, reservations = []) {
+	function generateCalendarDays(year, month, reservations = [], holidayMap = {}) {
 		const firstDay = new Date(year, month, 1);
 		const lastDay = new Date(year, month + 1, 0);
 		const firstDayOfWeek = firstDay.getDay();
@@ -46,6 +84,7 @@
 				date: dayDate,
 				isCurrentMonth: false,
 				isOtherMonth: true,
+				holidayName: holidayMap[toHolidayKey(dayDate)] || null,
 				...getReservationInfo(dayDate)
 			});
 		}
@@ -58,6 +97,7 @@
 				date: dayDate,
 				isCurrentMonth: true,
 				isOtherMonth: false,
+				holidayName: holidayMap[toHolidayKey(dayDate)] || null,
 				...getReservationInfo(dayDate)
 			});
 		}
@@ -72,6 +112,7 @@
 				date: dayDate,
 				isCurrentMonth: false,
 				isOtherMonth: true,
+				holidayName: holidayMap[toHolidayKey(dayDate)] || null,
 				...getReservationInfo(dayDate)
 			});
 		}
@@ -261,7 +302,7 @@
 	 */
 	function getDayClass(dayInfo) {
 		const classes = ['calendar-day'];
-		const { date, isCurrentMonth, isOtherMonth, hasReservation, reservationStatus, reservationPosition } = dayInfo;
+		const { date, isCurrentMonth, isOtherMonth, hasReservation, reservationStatus, reservationPosition, holidayName } = dayInfo;
 		const dayOfWeek = date.getDay();
 		
 		if (isOtherMonth) classes.push('other-month');
@@ -282,7 +323,8 @@
 		
 		if (dayOfWeek === 0) classes.push('sunday');
 		if (dayOfWeek === 6) classes.push('saturday');
-		
+		if (holidayName) classes.push('holiday');
+
 		return classes.join(' ');
 	}
 </script>
@@ -303,7 +345,7 @@
 			{#if onRefresh}
 				<button 
 					class="refresh-button"
-					on:click={onRefresh}
+					on:click={handleRefresh}
 					disabled={isRefreshing}
 					title="예약 정보 새로고침"
 				>
@@ -332,7 +374,8 @@
 				class="{getDayClass(dayInfo)}"
 				disabled={isDisabled(dayInfo.date) && dayInfo.isCurrentMonth && !dayInfo.hasReservation && !hasReservations(dayInfo.date)}
 				on:click={() => handleDateClick(dayInfo)}
-				aria-label="{currentYear}년 {currentMonth + 1}월 {dayInfo.day}일"
+				aria-label="{currentYear}년 {currentMonth + 1}월 {dayInfo.day}일{dayInfo.holidayName ? ` ${dayInfo.holidayName}` : ''}"
+				title={dayInfo.holidayName}
 			>
 				{dayInfo.day}
 			</button>
@@ -513,6 +556,11 @@
 
 	.calendar-day.saturday {
 		color: #6366f1;
+	}
+
+	/* 공휴일은 토요일이어도 일요일과 같은 색으로 표시 */
+	.calendar-day.holiday {
+		color: var(--error);
 	}
 
 	/* Today + disabled 상태 */
